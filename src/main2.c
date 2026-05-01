@@ -24,17 +24,23 @@
 #define INPUT_PIN2 21
 #define INPUT_PIN3 22
 
-void esquerda_direto(int duty_n){
-    pwm_tpm_CnV(TPM0, 3, duty_n); //frente esquerda
+void esquerda_m(int duty_n){
+    if (duty_n >= 0) {
+        pwm_tpm_CnV(TPM0, 3, duty_n); //frente esquerda
+        pwm_tpm_CnV(TPM0, 2, 0); //trás esquerda
+    } else {
+        pwm_tpm_CnV(TPM0, 2, -duty_n); //trás esquerda
+        pwm_tpm_CnV(TPM0, 3, 0); //frente esquerda
+    }
 }
-void esquerda_reverso(int duty_n){
-    pwm_tpm_CnV(TPM0, 2, duty_n); //trás esquerda
-}
-void direita_direto(int duty_n){
-    pwm_tpm_CnV(TPM0, 0, duty_n); //frente direita
-}
-void direita_reverso(int duty_n){
-    pwm_tpm_CnV(TPM0, 5, duty_n); //trás direita
+void direita_m(int duty_n){
+    if (duty_n >= 0) {
+        pwm_tpm_CnV(TPM0, 0, duty_n); //frente direita
+        pwm_tpm_CnV(TPM0, 5, 0); //trás direita
+    } else {
+        pwm_tpm_CnV(TPM0, 5, -duty_n); //trás direita
+        pwm_tpm_CnV(TPM0, 0, 0); //frente direita
+    }
 }
 int duty(int n){
     uint16_t d = TPM_MODULE*n/100;
@@ -51,7 +57,7 @@ int main(void)
         printk("Erro ao acessar porta\n");
         return 1;
     }
-    //esquerda no pino 20, meio no pino 21 e direita no pino 22
+    //esquerda no pino 20, meio no pino 21 e direita no pino 22, gpioe
 	ret1 = gpio_pin_configure(input_dev, INPUT_PIN1, GPIO_INPUT);
     if (ret1 != 0) {
         printk("Erro ao configurar pino %d\n", INPUT_PIN1);
@@ -90,57 +96,18 @@ int n=0; char curva = 'd';
 
 uint16_t duty_n = TPM_MODULE*n/100;
 
-//checka se entrou em uma curva
-if (esquerda == 0 && meio == 1 && direita == 1) { //curva aberta para a direita
-            esquerda_direto(duty(100));
-            esquerda_reverso(duty(0));
-            direita_direto(duty(0));
-            direita_reverso(duty(10));
-            curva = 'd';
-            n=80;
-        }
-        else if (esquerda == 0 && meio == 0 && direita == 1) { //curva fechada para a direita
-            esquerda_direto(duty(90));
-            esquerda_reverso(duty(0));
-            direita_direto(duty(0));
-            direita_reverso(duty(50));
-            curva = 'd';
-            n=80;
-        }
-        else if(esquerda == 1 && meio == 1 && direita == 0) { //curva aberta para a esquerda
-            esquerda_direto(duty(0));
-            esquerda_reverso(duty(10));
-            direita_direto(duty(100));
-            direita_reverso(duty(0));
-            curva = 'e';
-            n=80;
-        }
-        else if(esquerda == 1 && meio == 0 && direita == 0) { //curva fechada para a esquerda
-            esquerda_direto(duty(0));
-            esquerda_reverso(duty(50));
-            direita_direto(duty(90));
-            direita_reverso(duty(0));
-            curva = 'e';
-            n=80;
-        }
-        /*
-        esquerda = 1 & meio = 1 & direita = 0
-        esquerda = 1 & meio = 0 & direita = 1
-        esqueda = 0 & meio = 1 & direita = 0
-        */
+//o carrinho começa com o sensor do meio à esquerda da linha
        //SISTEMA DE MEMORIA PARA SE ELE SAIR DA PISTA
-       else if(esquerda == 0 && meio == 0 && direita == 0) { //saiu da pista
+       if(esquerda == 0 && meio == 0 && direita == 0) { //saiu da pista
         //saiu da pista pela direita (estava virando à esquerda)
         if(curva== 'e'){
             while(curva != 'd'){
-            esquerda_direto(duty(0));
-            esquerda_reverso(duty(50));
-            direita_direto(duty(50));
-            direita_reverso(duty(0));
+            direita_m(duty(100));
+            esquerda_m(-duty(50));
             esquerda = gpio_pin_get(input_dev, INPUT_PIN1);
             meio = gpio_pin_get(input_dev, INPUT_PIN2);
             direita = gpio_pin_get(input_dev, INPUT_PIN3);
-            if((esquerda == 0 && meio == 1 && direita == 1) || (esquerda == 0 && meio == 0 && direita == 1)) curva = 'd';
+            if((esquerda == 0 && meio == 1 && direita == 0) || (esquerda == 0 && meio == 0 && direita == 1)) curva = 'd';
             printk("Valor do esquerda: %d\n", esquerda);
             printk("Valor do meio: %d\n", meio);
             printk("Valor do direita: %d\n", direita);
@@ -150,14 +117,12 @@ if (esquerda == 0 && meio == 1 && direita == 1) { //curva aberta para a direita
             //saiu da pista pela esquerda (estava virando à direita)
             else if(curva== 'd'){
             while(curva != 'e'){    
-            esquerda_direto(duty(50));
-            esquerda_reverso(duty(0));
-            direita_direto(duty(0));
-            direita_reverso(duty(50));
+            direita_m(-duty(50));
+            esquerda_m(duty(100));
             esquerda = gpio_pin_get(input_dev, INPUT_PIN1);
             meio = gpio_pin_get(input_dev, INPUT_PIN2);
             direita = gpio_pin_get(input_dev, INPUT_PIN3);
-            if((esquerda == 1 && meio == 1 && direita == 0) || (esquerda == 1 && meio == 0 && direita == 0)) curva = 'e';
+            if((esquerda == 0 && meio == 1 && direita == 0) || (esquerda == 1 && meio == 0 && direita == 0)) curva = 'e';
             printk("Valor do esquerda: %d\n", esquerda);
             printk("Valor do meio: %d\n", meio);
             printk("Valor do direita: %d\n", direita);
@@ -166,7 +131,20 @@ if (esquerda == 0 && meio == 1 && direita == 1) { //curva aberta para a direita
     }
     n=80;
 }
-        //não entrou, acelera
+    //sistema de seugurança para se o sistema de memória falhar, ele para o carrinho
+    else if(esquerda == 0 && meio == 1 && direita == 1 || esquerda == 0 && meio == 0 && direita == 1){ //de corrigir à direita
+            curva = 'd';
+            direita_m(-duty(50));
+            esquerda_m(duty(80));
+            k_msleep(500);
+    }
+    else if(esquerda == 1 && meio == 1 && direita == 0 || esquerda == 1 && meio == 0 && direita == 0){ //de corrigir à esquerda
+            curva = 'e';
+            direita_m(duty(80));
+            esquerda_m(-duty(50));
+            k_msleep(500);
+    }
+    //não saiu e o sistema de segurança foi verificado, acelera
         //aceleração gradual a cada 10ms
         else {
         pwm_tpm_CnV(TPM0, 3, duty_n); //frente esquerda
