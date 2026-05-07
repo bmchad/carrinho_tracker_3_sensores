@@ -43,10 +43,6 @@
  
 #define TPM_PWM_H 		TPM_CnSC_MSB_MASK|TPM_CnSC_ELSB_MASK
 #define TPM_PWM_L 		TPM_CnSC_MSB_MASK|TPM_CnSC_ELSA_MASK
-// Input Capture: captura em ambas as bordas (subida e descida)
-#define TPM_INPUT_CAPTURE_BOTH   (TPM_CnSC_ELSA_MASK | TPM_CnSC_ELSB_MASK)
-// Habilita interrupção do canal
-#define TPM_CHANNEL_INTERRUPT    TPM_CnSC_CHIE_MASK
  
 #define EDGE_PWM 		0
 #define CENTER_PWM 		1
