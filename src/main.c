@@ -1,6 +1,6 @@
 /* NOTAS
-- VÊ BRANCO: output = 0
-- VÊ PRETO: output = 1
+- VÊ BRANCO: output = 1
+- VÊ PRETO: output = 0
 - É o meio da parte transparente que detecta a linha
 - IN1 = motor direita para trás
 - IN2 = motor direita para frente
@@ -48,6 +48,7 @@ int duty(int n){
     uint16_t d = TPM_MODULE*n/100;
     return d;
 }
+/* CÓDIGO TESTE DE MOTORES ESTÁ FUNCIONANDO PERFEITAMENTE
 int main (void){
         pwm_tpm_Init(TPM0, TPM_PLLFLL, TPM_MODULE, TPM_CLK, PS_128, EDGE_PWM);
     pwm_tpm_Ch_Init(TPM0, 3, TPM_PWM_H,GPIOD,3);
@@ -59,7 +60,11 @@ direita_m(duty(100));
 esquerda_m(duty(0));
 k_msleep(2000);
 
-direita_m(duty(-100));
+direita_m(duty(0));
+esquerda_m(duty(0));
+k_msleep(1000);
+
+direita_m(-duty(100));
 esquerda_m(duty(0));
 k_msleep(2000);
 
@@ -68,12 +73,79 @@ esquerda_m(duty(100));
 k_msleep(2000);
 
 direita_m(duty(0));
-esquerda_m(duty(-100));
+esquerda_m(duty(0));
+k_msleep(1000);
+
+direita_m(duty(0));
+esquerda_m(-duty(100));
 k_msleep(2000);
+
+direita_m(duty(0));
+esquerda_m(duty(0));
+k_msleep(3000);
     }
     return 0;
 }
-/*
+*/
+
+/*CODIGO PARA TESTAR OS SENSORES
+DE FATO 
+VÊ PRETO = 0
+VÊ BRANCO = 1
+int main(void)
+{
+    // Configura os sensores
+    const struct device *input_dev;
+    int esquerda, direita, ret1, ret2;
+	input_dev = DEVICE_DT_GET(INPUT_PORT);
+    if (!input_dev) {
+        printk("Erro ao acessar porta\n");
+        return 1;
+    }
+
+	ret1 = gpio_pin_configure(input_dev, INPUT_PIN1, GPIO_INPUT);
+    
+    if (ret1 != 0) {
+        printk("Erro ao configurar pino %d\n", INPUT_PIN1);
+        return 1;
+    }
+
+	ret2 = gpio_pin_configure(input_dev, INPUT_PIN3, GPIO_INPUT);
+    if (ret2 != 0) {
+        printk("Erro ao configurar pino %d\n", INPUT_PIN3);
+        return 1;
+    }
+
+    // Configura os motores
+    pwm_tpm_Init(TPM0, TPM_PLLFLL, TPM_MODULE, TPM_CLK, PS_8, CENTER_PWM);
+    pwm_tpm_Ch_Init(TPM0, 3, TPM_PWM_H,GPIOD,3);
+    pwm_tpm_Ch_Init(TPM0, 2, TPM_PWM_H,GPIOD,2);
+    pwm_tpm_Ch_Init(TPM0, 0, TPM_PWM_H,GPIOD,0);
+    pwm_tpm_Ch_Init(TPM0, 5, TPM_PWM_H,GPIOD,5);
+
+    while (1) {
+        esquerda = gpio_pin_get(input_dev, INPUT_PIN1);
+		direita = gpio_pin_get(input_dev, INPUT_PIN3);
+
+        if (esquerda == 0 && direita == 0) {
+            direita_m(duty(100));
+            esquerda_m(duty(100));
+        }
+        else if (esquerda == 1 && direita == 0) {
+            direita_m(duty(0));
+            esquerda_m(duty(100));
+        }
+        else if (esquerda == 0 && direita == 1) {
+            direita_m(duty(100));
+            esquerda_m(duty(0));
+        }
+        else if (esquerda == 1 && direita == 1) {
+            direita_m(duty(100));
+            esquerda_m(duty(100));
+        }
+    }
+}
+    */
 int main(void){
     // Configura os sensores
     const struct device *input_dev;
@@ -115,7 +187,7 @@ sensorUltrassonicoInit();
 int n=0; 
 char curva = 'd'; 
 int vmin = 60;
-int sleep = 5;
+int sleep = 1;
     while (1) {
         esquerda = gpio_pin_get(input_dev, INPUT_PIN1);
 		meio = gpio_pin_get(input_dev, INPUT_PIN2);
@@ -133,19 +205,19 @@ distancia = calculaDistancia();
 printk("Distancia: %f\n", distancia);
         if(distancia>25){
        //SISTEMA DE MEMORIA PARA SE ELE SAIR DA PISTA
-       if(esquerda == 0 && meio == 1 && direita == 0) { 
+       if(esquerda == 1 && meio == 0 && direita == 1) { 
         // a situação esquerda = 0, meio = 1 e direita = 0 é a iminencia de sair
         if(curva== 'e'){
-            esquerda_m(duty(20));
+            esquerda_m(duty(40));
             direita_m(duty(60)); //deve corrigir ao lado contrário da inércia
-            if((esquerda == 0 && meio == 1 && direita == 0) || (esquerda == 0 && meio == 0 && direita == 1)) curva = 'd';
+            if((esquerda == 1 && meio == 0 && direita == 0) || (esquerda == 1 && meio == 1 && direita == 0)) curva = 'd';
             k_msleep(sleep);
     }
             //saiu da pista pela esquerda (estava virando à direita)
             else if(curva== 'd'){
             esquerda_m(duty(60));
-            direita_m(duty(20)); //deve corrigir ao lado contrário da inércia
-            if((esquerda == 1 && meio == 1 && direita == 0) || (esquerda == 1 && meio == 0 && direita == 0)) curva = 'e';
+            direita_m(duty(40)); //deve corrigir ao lado contrário da inércia
+            if((esquerda == 0 && meio == 0 && direita == 1) || (esquerda == 0 && meio == 1 && direita == 1)) curva = 'e';
             k_msleep(sleep);
         }
         n = vmin;
@@ -153,13 +225,21 @@ printk("Distancia: %f\n", distancia);
 		meio = gpio_pin_get(input_dev, INPUT_PIN2);
 		direita = gpio_pin_get(input_dev, INPUT_PIN3);
 }
-       else if(esquerda == 0 && meio == 0 && direita == 0) { //saiu da pista
+/*
+       if(esquerda == 0 && meio == 1 && direita == 0) { 
+        esquerda_m(duty(80));
+        direita_m(duty(80));
+        k_msleep(sleep);
+        n = vmin;
+       }
+        */
+       else if(esquerda == 1 && meio == 1 && direita == 1) { //saiu da pista
         //saiu da pista pela direita (estava virando à esquerda)
         //na pratica: se os sensores são todos 0, o melhor comportamento é ele corrigir levemete para o lado da curva
         if(curva== 'e'){
             esquerda_m(duty(55));
             direita_m(duty(70));
-            if((esquerda == 0 && meio == 1 && direita == 1) || (esquerda == 0 && meio == 0 && direita == 1)) curva = 'd';
+            if((esquerda == 1 && meio == 0 && direita == 0) || (esquerda == 1 && meio == 1 && direita == 0)) curva = 'd';
             k_msleep(sleep);
             n = vmin;
         esquerda = gpio_pin_get(input_dev, INPUT_PIN1);
@@ -170,7 +250,7 @@ printk("Distancia: %f\n", distancia);
             else if(curva== 'd'){
             esquerda_m(duty(70));
             direita_m(duty(55));
-            if((esquerda == 0 && meio == 1 && direita == 0) || (esquerda == 1 && meio == 0 && direita == 0)) curva = 'e';
+            if((esquerda == 0 && meio == 0 && direita == 1) || (esquerda == 0 && meio == 1 && direita == 1)) curva = 'e';
             k_msleep(sleep);
             n=vmin;
         esquerda = gpio_pin_get(input_dev, INPUT_PIN1);
@@ -182,20 +262,20 @@ printk("Distancia: %f\n", distancia);
 		direita = gpio_pin_get(input_dev, INPUT_PIN3);
        }
     //sistema de seugurança para se o sistema de memória falhar, ele para o carrinho
-    else if((esquerda == 0 && meio == 1 && direita == 1) || (esquerda == 0 && meio == 0 && direita == 1)){ //de corrigir à direita
-            curva = 'd';
-            esquerda_m(duty(60));
-            direita_m(duty(0));
+    else if((esquerda == 0 && meio == 1 && direita == 1) || (esquerda == 0 && meio == 0 && direita == 1)){ //de corrigir à esquerda
+            curva = 'e';
+            esquerda_m(duty(0));
+            direita_m(duty(60));
             k_msleep(sleep);
             n = vmin;
         esquerda = gpio_pin_get(input_dev, INPUT_PIN1);
 		meio = gpio_pin_get(input_dev, INPUT_PIN2);
 		direita = gpio_pin_get(input_dev, INPUT_PIN3);
     }
-    else if((esquerda == 1 && meio == 1 && direita == 0) || (esquerda == 1 && meio == 0 && direita == 0)){ //de corrigir à esquerda
-            curva = 'e';
-            esquerda_m(duty(0));
-            direita_m(duty(60));
+    else if((esquerda == 1 && meio == 1 && direita == 0) || (esquerda == 1 && meio == 0 && direita == 0)){ //de corrigir à direita
+            curva = 'd';
+            esquerda_m(duty(60));
+            direita_m(duty(0));
             k_msleep(sleep);
             n = vmin;
         esquerda = gpio_pin_get(input_dev, INPUT_PIN1);
@@ -222,15 +302,10 @@ else if(distancia<=25){
     esquerda_m(duty(0));
     direita_m(duty(0));
     k_msleep(200);
-    // Só vai à ré se ainda estiver próximo
-    distancia = calculaDistancia();
-    if(distancia <= 23) {
-        esquerda_m(duty(-40));
-        direita_m(duty(-40));
-        k_msleep(300);
+        esquerda_m(-duty(40));
+        direita_m(-duty(40));
+        k_msleep(200);
 }
     }
-}
     return 0;
 }
-*/
