@@ -302,9 +302,9 @@ else if(distancia<=25){
     esquerda_m(duty(0));
     direita_m(duty(0));
     k_msleep(200);
-        esquerda_m(-duty(40));
-        direita_m(-duty(40));
-        k_msleep(200);
+        esquerda_m(-duty(50));
+        direita_m(-duty(50));
+        k_msleep(800);
 }
     }
     return 0;
