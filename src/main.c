@@ -279,8 +279,8 @@ if(distancia < 25) {
     //sistema de seugurança para se o sistema de memória falhar, ele para o carrinho
     else if((esquerda == 0 && meio == 1 && direita == 1) || (esquerda == 0 && meio == 0 && direita == 1)){ //de corrigir à esquerda
             curva = 'e';
-            esquerda_m(duty(0));
-            direita_m(duty(100));
+            esquerda_m(-duty(40));
+            direita_m(duty(70));
             k_msleep(sleep);
             n = vmin;
         esquerda = gpio_pin_get(input_dev, INPUT_PIN1);
@@ -289,8 +289,8 @@ if(distancia < 25) {
     }
     else if((esquerda == 1 && meio == 1 && direita == 0) || (esquerda == 1 && meio == 0 && direita == 0)){ //de corrigir à direita
             curva = 'd';
-            esquerda_m(duty(100));
-            direita_m(duty(0));
+            esquerda_m(duty(70));
+            direita_m(-duty(40));
             k_msleep(sleep);
             n = vmin;
         esquerda = gpio_pin_get(input_dev, INPUT_PIN1);
